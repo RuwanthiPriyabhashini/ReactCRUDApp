@@ -1,38 +1,94 @@
-import React from 'react';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import { BrowserRouter as Router, Route, Link  } from 'react-router-dom';
-import Create from './components/create.component';
-import Edit from './components/edit.component';
-import Index from './components/index.component';
-import {Switch} from 'react-router-dom';
+import React, {useState, useEffect} from 'react';
+import {AiOutlinePlus} from 'react-icons/ai';
+import Todo from './Todo';
+import { db } from './firebase';
+import {query, collection, onSnapshot, updateDoc, doc, addDoc } from 'firebase/firestore';
+
+const style ={
+  bg:`h-screen w-screen p-4 bg-gradient-to-r from-[#2F80ED] to-[#1CB5E0]`,
+  container: `bg-slate-100 max-w-[500px] w-full m-auto rounded-md shadow-xl p-4`,
+  heading: `text-3xl font-bold text-center text-gray-800 p-2`,
+  form: `flex justify-between`,
+  input: `border p-2 w-full text-xl`,
+  button: `border p-4 ml-2 sm:mt-0 bg-purple-500 text-slate-100`,
+  count: `text-center p-2`
+}
+
 
 export default function App(){
-  return(
-    <Router> 
-      <div className='container'>
-      <nav className='navbar navbar-expand-lg navbar-light bg-light'>
-        <Link to='/' className='navbar-brand'>React CRUD App</Link>
-      <div className='collapse navbar-collapse' id='navbarSupportedContent'>
-        <ul className='navbar-nav mr-auto'>
-          <li className='nav-item'>
-            <Link to= '/' className='nav-link'>Home</Link>
-             </li>
-             <li>
-             <Link to = '/create' className='nav-link'>Create</Link>
-             </li>
-             <li>
-              <Link to = '/index' className='nav-link'>Index</Link>
-             </li>
-             
-        </ul>
-      </div>
 
-      </nav>
-      <br/>
-      <h1> Welcome to REACT CRUD BY RUWI</h1>
-   
+  const [todos, settodos] = useState([])
+  const [input, setInput] = useState('')
+
+
+  //Create todo
+  const createTodo = async (e) => {
+    e.preventDefault(e);
+    if(input === ''){
+      alert('Please enter a valid input')
+      return
+    }
+    await addDoc(collection(db, 'todos'),{
+      text: input,
+      completed: false,
+    })
+  }
+
+
+
+  //Read todo from firebase
+  useEffect(() => {
+    const q = query(collection(db, 'todos'))
+    const unsubscribe = onSnapshot(q, (QuerySnapshot) =>{
+      let todosArr = []
+      QuerySnapshot.forEach((doc)=>{
+        todosArr.push({...doc.data(), id:doc.id})
+      });
+
+      settodos(todosArr)
+
+    })
+
+    return () => unsubscribe();
+  },[]);
+
+
+
+
+  //Update todo in firebase
+  const toggleComplete = async (todo) =>{
+
+    await updateDoc(doc(db, 'todos', todo.id), {
+      completed : !todo.completed
+    })
+  }
+
+
+
+  //Delete todo
+
+
+  return(
+    <div className={style.bg}>
+      <div className={style.container}>
+        <h3 className={style.heading}>Todo App</h3>
+        <form onSubmit ={createTodo} className={style.form}>
+          <input 
+          value ={input} onChange ={(e) => setInput(e.target.value)} 
+          className={style.input} 
+          type="text" 
+          placeholder='Add Todo'>
+          </input>
+          <button className={style.button}><AiOutlinePlus size= {30}/> </button>
+        </form>
+        <ul>
+          {todos.map((todo, index) => (
+            <Todo key={index} todo={todo} toggleComplete={toggleComplete}/>
+          ))}
+          
+        </ul>
+        <p className={style.count}>You have 2 todos</p>
+        </div>
     </div>
-    </Router>
-    
   );
 }
